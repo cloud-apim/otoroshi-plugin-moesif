@@ -46,9 +46,9 @@ In this example, we linked the customer_key and the company_key to the email pro
 
 By default, the 'Moesif' plugin won't send any information if all the mandatory fields are not filled.
 
-## Customization
+## Customisation
 
-You can customize the plugin on the routes you would like to cover.
+You can customise the plugin on the routes you would like to cover.
 
 You could add a filter on the routes which contain a billing property in the metatada.
 
