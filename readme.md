@@ -20,7 +20,7 @@ This property could be located wherever you want in your apikey (in the metadata
 
 `action_name` : `String` field is _optional_
 
-Example
+### Example
 
  ```json
 {
@@ -32,3 +32,5 @@ Example
 ```
 
 In this example, we linked the customer_key and the company_key to the email property located in the apikey's metadata `$.metadata.email`.
+
+By default, the 'Moesif' plugin won't send any information if all the mandatory fields are not filled.
