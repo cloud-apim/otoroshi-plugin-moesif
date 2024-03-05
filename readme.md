@@ -12,13 +12,13 @@ This property could be located wherever you want in your apikey (in the metadata
 
 ## Plugin configuration
 
-`app_id` is an alphanumeric value field is **mandatory**
+`app_id` : `String` field is **mandatory**
 
-`customer_key` is a json path field is **mandatory**
+`customer_key` : `JSON path` field is **mandatory**
 
-`company_key` is a json path field is **mandatory**
+`company_key` : `JSON path` field is **mandatory**
 
-`action_name` field is _optional_
+`action_name` : `String` field is _optional_
 
 Example
 
