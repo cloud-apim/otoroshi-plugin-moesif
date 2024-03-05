@@ -1,9 +1,13 @@
 # Cloud APIM Moesif otoroshi plugin
 
 ## Prerequisites
-In order to use the 'Moesif' plugin you have to enable the 'ApiKey' plugin on the route.
+In order to use the 'Moesif' plugin you have to enable the `Apikeys` plugin on the route.
 
-The 'Moesif' plugin will read the apikey informations using a json path.
+Firstly, go to your otoroshi UI.
+
+Select your route(s) and add the `Apikeys` plugin.
+
+The `Moesif` plugin will read the apikey informations using a json path.
 
 Then, you need to link the customer_key and company_key fields to
 a specific property of your apikey to specify which customer is using the route with his apikey.
@@ -14,7 +18,7 @@ This property could be located wherever you want in your apikey (in the metadata
 
 Go to the `Data Exporters` tab and press the `Add Item` button.
 
-Choose `custom' as data exporter type.
+Choose `custom` as data exporter type.
 
 In the `Exporter Config` panel you need to select `Moesif`.
 
@@ -44,7 +48,7 @@ Then, you need to configure the plugin as explain in the next chapter.
 
 In this example, we linked the customer_key and the company_key to the email property located in the apikey's metadata `$.metadata.email`.
 
-By default, the 'Moesif' plugin won't send any information if all the mandatory fields are not filled.
+By default, the `Moesif` plugin won't send any information if all the mandatory fields are not filled.
 
 ## Customisation
 
