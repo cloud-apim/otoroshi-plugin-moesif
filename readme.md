@@ -10,6 +10,17 @@ a specific property of your apikey to specify which customer is using the route 
 
 This property could be located wherever you want in your apikey (in the metadata, in the tags, ...)
 
+## Add the plugin to otoroshi
+
+Go to the `Data Exporters` tab and press the `Add Item` button.
+
+Choose `custom' as data exporter type.
+
+In the `Exporter Config` panel you need to select `Moesif`.
+
+Then, you need to configure the plugin as explain in the next chapter.
+
+
 ## Plugin configuration
 
 `app_id` : `String` field is **mandatory**
