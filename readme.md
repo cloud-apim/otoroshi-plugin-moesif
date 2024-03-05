@@ -45,3 +45,30 @@ Then, you need to configure the plugin as explain in the next chapter.
 In this example, we linked the customer_key and the company_key to the email property located in the apikey's metadata `$.metadata.email`.
 
 By default, the 'Moesif' plugin won't send any information if all the mandatory fields are not filled.
+
+## Customization
+
+You can customize the plugin on the routes you would like to cover.
+
+You could add a filter on the routes which contain a billing property in the metatada.
+
+In this example, we added a filter to cover all routes which have a billing property 
+and the property's value is settled to `enabled`
+
+You could also add some exlusions.
+
+```json
+{
+  "include": [
+    {
+      "@type": "GatewayEvent",
+      "route": {
+        "metadata": {
+          "billing": "enabled"
+        }
+      }
+    }
+  ],
+  "exclude": []
+}
+```
