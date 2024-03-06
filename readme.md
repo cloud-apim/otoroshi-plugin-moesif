@@ -1,7 +1,8 @@
 # Cloud APIM Moesif otoroshi plugin
 
 ## Prerequisites
-In order to use the 'Moesif' plugin you have to enable the `Apikeys` plugin on the route.
+
+In order to use the `Moesif` plugin you have to enable the `Apikeys` plugin on the route.
 
 Firstly, go to your otoroshi UI.
 
@@ -24,7 +25,6 @@ In the `Exporter Config` panel you need to select `Moesif`.
 
 Then, you need to configure the plugin as explain in the next chapter.
 
-
 ## Plugin configuration
 
 `app_id` : `String` field is **mandatory**
@@ -39,14 +39,15 @@ Then, you need to configure the plugin as explain in the next chapter.
 
  ```json
 {
-    "app_id": "your moesif app id here", 
-    "customer_key": "$.metadata.email",
-    "company_key": "$.metadata.email",
-    "action_name": "whatever you want" 
+  "app_id": "your moesif app id here",
+  "customer_key": "$.metadata.email",
+  "company_key": "$.metadata.email",
+  "action_name": "whatever you want"
 }
 ```
 
-In this example, we linked the customer_key and the company_key to the email property located in the apikey's metadata `$.metadata.email`.
+In this example, we linked the customer_key and the company_key to the email property located in the apikey's
+metadata `$.metadata.email`.
 
 By default, the `Moesif` plugin won't send any information if all the mandatory fields are not filled.
 
@@ -56,10 +57,8 @@ You can customise the plugin on the routes you would like to cover.
 
 You could add a filter on the routes which contain a billing property in the metatada.
 
-In this example, we added a filter to cover all routes which have a billing property 
+In this example, we added a filter to cover all routes which have a billing property
 and the property's value is settled to `enabled`
-
-You could also add some exlusions.
 
 ```json
 {
@@ -74,5 +73,39 @@ You could also add some exlusions.
     }
   ],
   "exclude": []
+}
+```
+
+You could also add some exlusions based on your route metadata, tags, etc...
+
+```json
+{
+  "include": [],
+  "exclude": [
+    {
+      "@type": "GatewayEvent",
+      "route": {
+        "metadata": {
+          "billing": "disabled"
+        }
+      }
+    }
+  ]
+}
+```
+
+Or add some exlusions based on the host target of your route(s).
+
+```json
+{
+  "include": [],
+  "exclude": [
+    {
+      "@type": "GatewayEvent",
+      "target": {
+        "host": "myapp.mydomain.com"
+      }
+    }
+  ]
 }
 ```
