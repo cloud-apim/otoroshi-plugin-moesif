@@ -2,18 +2,77 @@
 
 ## Prerequisites
 
-In order to use the `Moesif` plugin you have to enable the `Apikeys` plugin on the route.
+In order to use the `Moesif` plugin you have to enable the `Apikeys` plugin on your route(s) you will use.
 
 Firstly, go to your otoroshi UI.
 
 Select your route(s) and add the `Apikeys` plugin.
 
-The `Moesif` plugin will read the apikey informations using a json path.
+The `Moesif` plugin will read the apikey information using a json path.
 
-Then, you need to link the customer_key and company_key fields to
+Then, you need to link the `customer_key` and `company_key` fields to
 a specific property of your apikey to specify which customer is using the route with his apikey.
 
 This property could be located wherever you want in your apikey (in the metadata, in the tags, ...)
+
+As an example you could put the `customer_key`and the `company_key`in the apikey metadata.
+
+```json
+{
+  "_loc": {
+    "tenant": "default",
+    "teams": [
+      "default"
+    ]
+  },
+  "clientId": "YOUR_CLIENT_ID_HERE",
+  "clientSecret": "YOUR_CLIENT_SECRET_HERE",
+  "clientName": "CLIENT_NAME",
+  "description": "",
+  "authorizedGroup": "default",
+  "authorizedEntities": [
+    "ROUTE_HERE",
+    "group_default"
+  ],
+  "authorizations": [
+    {
+      "kind": "service",
+      "id": "ROUTE_HERE"
+    },
+    {
+      "kind": "group",
+      "id": "default"
+    }
+  ],
+  "enabled": true,
+  "readOnly": false,
+  "allowClientIdOnly": false,
+  "throttlingQuota": 10000000,
+  "dailyQuota": 10000000,
+  "monthlyQuota": 10000000,
+  "constrainedServicesOnly": false,
+  "restrictions": {
+    "enabled": false,
+    "allowLast": true,
+    "allowed": [],
+    "forbidden": [],
+    "notFound": []
+  },
+  "rotation": {
+    "enabled": false,
+    "rotationEvery": 744,
+    "gracePeriod": 168,
+    "nextSecret": null
+  },
+  "validUntil": null,
+  "tags": [],
+  "metadata": {
+    "customer_id": "YOUR CUSTOMER ID HERE",
+    "company_id": "YOUR CUSTOMER COMPANY HERE"
+  },
+  "kind": "ApiKey"
+}
+```
 
 ## Add the plugin to otoroshi
 
