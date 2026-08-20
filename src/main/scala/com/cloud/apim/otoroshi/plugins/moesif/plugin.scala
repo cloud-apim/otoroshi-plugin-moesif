@@ -5,8 +5,9 @@ import otoroshi.events.DataExporter.DefaultDataExporter
 import otoroshi.events.{CustomDataExporter, CustomDataExporterContext, ExportResult}
 import otoroshi.models.DataExporterConfig
 import otoroshi.next.plugins.api.{NgPluginCategory, NgPluginConfig, NgPluginVisibility, NgStep}
-import otoroshi.utils.syntax.implicits._
-import play.api.libs.json.{Format, JsError, JsResult, JsSuccess, JsValue, Json}
+import otoroshi.utils.syntax.implicits.*
+import play.api.libs.json.{Format, JsArray, JsError, JsObject, JsResult, JsSuccess, JsValue, Json}
+import play.api.libs.ws.WSBodyWritables.given
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.{ExecutionContext, Future}
@@ -19,7 +20,7 @@ case class NgMoesifValuesConfig(applicationId: String = "", customerKeyName: Str
 // User can customize the location of the company and the customer key (in the metadata, tags) of the apikey
 // He also can modify the action name displayed in Moesif
 object NgMoesifValuesConfig {
-  val format = new Format[NgMoesifValuesConfig] {
+  given format: Format[NgMoesifValuesConfig] = new Format[NgMoesifValuesConfig] {
     override def reads(json: JsValue): JsResult[NgMoesifValuesConfig] = Try {
       NgMoesifValuesConfig(
         applicationId =  json.select("app_id").asOpt[String].getOrElse(""),
@@ -41,42 +42,45 @@ object NgMoesifValuesConfig {
   }
 }
 
-class InternalMoesifDataExporter(config: DataExporterConfig, internalConfig: JsValue)(implicit ec: ExecutionContext, env: Env) extends DefaultDataExporter(config)(ec, env) {
+extension (json: JsValue) {
+  private def isGatewayEvent: Boolean                    = json.select("@type").asOpt[String].contains("GatewayEvent")
+  private def stringAtPath(path: String): Option[String] = json.atPath(path).asOpt[String]
+}
 
-  private val moesifDataExporterConfig = NgMoesifValuesConfig.format.reads(internalConfig).getOrElse(NgMoesifValuesConfig())
+class InternalMoesifDataExporter(config: DataExporterConfig, internalConfig: JsValue)(using ec: ExecutionContext, env: Env) extends DefaultDataExporter(config) {
+
+  private val moesifConfig = NgMoesifValuesConfig.format.reads(internalConfig).getOrElse(NgMoesifValuesConfig())
   private val MOESIF_BATCH_API_URL =  "https://api.moesif.net/v1/actions/batch"
-  override def send(events: Seq[JsValue]): Future[ExportResult] = {
-    var moesifBatch = Json.arr()
-    events.map { m =>
-      if (m.select("@type").asOpt[String].contains("GatewayEvent")) {
-        m.atPath("$.identity.identity").asOpt[String] match {
-          case None => ()
-          case Some(keyValue) =>
 
-            env.proxyState.apikey(keyValue) match {
-              case None => ()
-              case Some(apikey) =>
-                for {
-                  userId <- apikey.toJson.atPath(moesifDataExporterConfig.customerKeyName).asOpt[String]
-                  companyId <- apikey.toJson.atPath(moesifDataExporterConfig.companyKeyName).asOpt[String]
-                  urlScheme <- m.atPath("$.to.scheme").asOpt[String]
-                  urlHost <- m.atPath("$.to.host").asOpt[String]
-                  urlTargetUri <- m.atPath("$.target.uri").asOpt[String]
-                } yield {
-                  moesifBatch = moesifBatch :+ Json.obj(
-                    "action_name" -> moesifDataExporterConfig.moesifActionName,
-                    "user_id" -> userId,
-                    "company_id" -> companyId,
-                    "request" -> Json.obj("uri" -> s"${urlScheme}://${urlHost}${urlTargetUri}")
-                  )
-                }
-            }
-        }
-      }
+  // an event is turned into a moesif action only if it is a gateway event issued by a known apikey
+  // for which every configured field can be resolved
+  private def moesifActionFor(event: JsValue): Option[JsObject] = {
+    if (!event.isGatewayEvent) {
+      None
+    } else {
+      for {
+        identity  <- event.stringAtPath("$.identity.identity")
+        apikey    <- env.proxyState.apikey(identity)
+        apikeyJson = apikey.toJson
+        userId    <- apikeyJson.stringAtPath(moesifConfig.customerKeyName)
+        companyId <- apikeyJson.stringAtPath(moesifConfig.companyKeyName)
+        urlScheme <- event.stringAtPath("$.to.scheme")
+        urlHost   <- event.stringAtPath("$.to.host")
+        urlTarget <- event.stringAtPath("$.target.uri")
+      } yield Json.obj(
+        "action_name" -> moesifConfig.moesifActionName,
+        "user_id"     -> userId,
+        "company_id"  -> companyId,
+        "request"     -> Json.obj("uri" -> s"${urlScheme}://${urlHost}${urlTarget}")
+      )
     }
+  }
+
+  override def send(events: Seq[JsValue]): Future[ExportResult] = {
+    val moesifBatch = events.flatMap(moesifActionFor)
 
     // Send the request to moesif only if the bacth is not empty and the application ID is filled
-    if(moesifDataExporterConfig.applicationId.nonEmpty && moesifBatch.value.nonEmpty){
+    if (moesifConfig.applicationId.nonEmpty && moesifBatch.nonEmpty) {
       env.Ws
         .url(MOESIF_BATCH_API_URL)
         .withMethod("POST")
@@ -85,9 +89,9 @@ class InternalMoesifDataExporter(config: DataExporterConfig, internalConfig: JsV
           env.Headers.OtoroshiClientSecret -> env.clusterConfig.leader.clientSecret,
           "Content-Type"                   -> "application/json",
           "Accept"                         -> "application/json",
-          "X-Moesif-Application-Id" -> moesifDataExporterConfig.applicationId
+          "X-Moesif-Application-Id" -> moesifConfig.applicationId
         )
-        .withBody(moesifBatch)
+        .withBody(JsArray(moesifBatch))
         .execute()
         .map { resp =>
           if (resp.status == 201) {
@@ -100,7 +104,7 @@ class InternalMoesifDataExporter(config: DataExporterConfig, internalConfig: JsV
             ExportResult.ExportResultFailure("Fail to send moesif data")
           }
         }
-    }else{
+    } else {
       ExportResult.ExportResultFailure("Fail to send moesif data").future
     }
   }
@@ -143,25 +147,25 @@ class MoesifDataExporter extends CustomDataExporter {
 //    )
 //  ))
 
-  override def accept(event: JsValue, ctx: CustomDataExporterContext)(implicit env: Env): Boolean = {
+  override def accept(event: JsValue, ctx: CustomDataExporterContext)(using env: Env): Boolean = {
     ref.get().accept(event)
   }
 
-  override def project(event: JsValue, ctx: CustomDataExporterContext)(implicit env: Env): JsValue = {
+  override def project(event: JsValue, ctx: CustomDataExporterContext)(using env: Env): JsValue = {
     ref.get().project(event)
   }
 
-  override def send(events: Seq[JsValue], ctx: CustomDataExporterContext)(implicit ec: ExecutionContext, env: Env): Future[ExportResult] = {
+  override def send(events: Seq[JsValue], ctx: CustomDataExporterContext)(using ec: ExecutionContext, env: Env): Future[ExportResult] = {
     ref.get().send(events)
   }
 
-  override def startExporter(ctx: CustomDataExporterContext)(implicit ec: ExecutionContext, env: Env): Future[Unit] = {
-    ref.set(new InternalMoesifDataExporter(ctx.exporter.configUnsafe, ctx.config)(ec, env))
+  override def startExporter(ctx: CustomDataExporterContext)(using ec: ExecutionContext, env: Env): Future[Unit] = {
+    ref.set(new InternalMoesifDataExporter(ctx.exporter.configUnsafe, ctx.config))
     ref.get().onStart()
     ().vfuture
   }
 
-  override def stopExporter(ctx: CustomDataExporterContext)(implicit ec: ExecutionContext, env: Env): Future[Unit] = {
+  override def stopExporter(ctx: CustomDataExporterContext)(using ec: ExecutionContext, env: Env): Future[Unit] = {
     ref.get().onStop()
     ().vfuture
   }
